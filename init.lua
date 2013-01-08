@@ -35,6 +35,7 @@ shifty.config.tags = {}
 shifty.config.apps = {}
 shifty.config.defaults = {}
 shifty.config.float_bars = false
+shifty.config.no_offscreen = true
 shifty.config.guess_name = true
 shifty.config.guess_position = true
 shifty.config.remember_index = true
@@ -615,23 +616,34 @@ function match(c, startup)
     -- set key bindings
     c:keys(keys)
 
-    -- Add titlebars to all clients when the float, remove when they are
-    -- tiled.
-    if shifty.config.float_bars then
+    -- Adjust client position when it's starting to float.
+    -- Add titlebars to all clients when the float,
+    -- remove when they are tiled.
+    if shifty.config.float_bars or shifty.config.no_offscreen then
         c:connect_signal("property::floating", function(c)
-            if awful.client.floating.get(c) then
-                awful.titlebar.add(c, {modkey=modkey})
-            else
-                awful.titlebar.remove(c)
+            local is_floating = awful.client.floating.get(c)
+
+            if shifty.config.float_bars then
+                if is_floating then
+                    awful.titlebar.add(c, { modkey = modkey })
+                else
+                    awful.titlebar.remove(c)
+                end
             end
-            awful.placement.no_offscreen(c)
+            if shifty.config.no_offscreen and is_floating then
+                awful.placement.no_offscreen(c)
+            end
         end)
     end
 
     -- set properties of floating clients
     if float ~= nil then
         awful.client.floating.set(c, float)
-        awful.placement.no_offscreen(c)
+        if not geom and
+           not c.size_hints.program_position and
+           not c.size_hints.user_position then
+            awful.placement.centered(c)
+        end
     end
 
     local sel = awful.tag.selectedlist(target_screen)
